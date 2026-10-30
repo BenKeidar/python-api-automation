@@ -27,6 +27,51 @@ jobs:
         run: |
           python -m pytest tests/ -v --alluredir=allure-results
 
+
+      - name: Add Allure environment and executor info
+        if: always()
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          REPOSITORY: ${{ github.repository }}
+          REF_NAME: ${{ github.ref_name }}
+          SERVER_URL: ${{ github.server_url }}
+        run: |
+          mkdir -p allure-results
+
+          cat > allure-results/environment.properties <<EOF
+          Python=3.13
+          OS=Ubuntu
+          Framework=Pytest
+          API=JSONPlaceholder
+          EOF
+
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          build_url = (
+              f"{os.environ['SERVER_URL']}/"
+              f"{os.environ['REPOSITORY']}/actions/runs/"
+              f"{os.environ['RUN_ID']}"
+          )
+
+          executor = {
+              "name": "GitHub Actions",
+              "type": "github",
+              "buildName": f"Run #{os.environ['RUN_NUMBER']}",
+              "buildUrl": build_url,
+              "reportName": "API Automation Tests",
+              "reportUrl": build_url,
+          }
+
+          Path("allure-results/executor.json").write_text(
+              json.dumps(executor, indent=2),
+              encoding="utf-8"
+          )
+          PY  
+
       - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4
