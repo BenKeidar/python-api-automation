@@ -2,7 +2,7 @@
 
 A Python-based REST API automation framework built with **Requests, Pytest, JSON Schema, and Allure**, featuring reusable API clients, data-driven testing, error-handling validation, and automated execution with GitHub Actions.
 
-The project demonstrates practical API testing techniques and a maintainable automation framework architecture.
+The project demonstrates practical API testing techniques, maintainable automation framework architecture, and an AI-assisted pull request review workflow using **Qodo Code Review**.
 
 ## Tech Stack
 
@@ -10,9 +10,11 @@ The project demonstrates practical API testing techniques and a maintainable aut
 - **Requests** — HTTP requests and API interactions
 - **Pytest** — Test execution, fixtures, assertions, and parameterization
 - **JSON Schema** — API response structure validation
-- **Allure** — Test reporting, steps, and response attachments
+- **Allure** — Test reporting, execution steps, and response attachments
 - **unittest.mock** — Controlled simulation of HTTP failures
 - **GitHub Actions** — Continuous integration and automated test execution
+- **Qodo Code Review** — AI-assisted code review on GitHub pull requests
+- **Cursor** — AI-assisted development environment
 
 ## API Under Test
 
@@ -22,7 +24,7 @@ The framework uses [JSONPlaceholder](https://jsonplaceholder.typicode.com/), a f
 
 ## Project Structure
 
-```
+```text
 python-api-automation/
 ├── .github/
 │   └── workflows/
@@ -54,7 +56,7 @@ python-api-automation/
 The framework separates HTTP communication from test logic.
 
 - `BaseClient` provides shared HTTP request handling, a base URL, a timeout, and request exception diagnostics.
-- `PostsClient` implements operations for the `/posts` resource.
+- `PostsClient` implements operations for the `/posts` resource, including retrieving individual posts and the posts collection.
 - `UsersClient` implements operations for the `/users` resource.
 
 This design reduces code duplication and keeps tests readable.
@@ -65,7 +67,7 @@ Reusable API clients are provided to tests through fixtures defined in `tests/co
 
 ### JSON Schema Validation
 
-Response schemas validate expected data types, required fields, and nested response structures.
+Response schemas validate expected data types, required fields, and nested response structures. The posts collection test validates each returned post against the existing `POST_SCHEMA`.
 
 ### Allure Reporting
 
@@ -73,17 +75,18 @@ Tests include Allure metadata, execution steps, and HTTP response attachments. H
 
 ## Test Coverage
 
-The framework currently contains **16 test cases**, including parameterized scenarios.
+The framework currently contains **17 Pytest test cases**, including parameterized scenarios.
 
-| Area                   | Coverage                                                           |
-| ---------------------- | ------------------------------------------------------------------ |
-| Posts API              | Retrieve posts, create, update, patch, and delete                  |
-| Negative API scenarios | Non-existing resources and a POST request without a title          |
-| Users API              | Retrieve individual users and user lists                           |
-| Data consistency       | Compare a user in the list endpoint with the user details endpoint |
-| JSON Schema            | Validate post and user response structures                         |
-| Parameterization       | Validate multiple post IDs and expected user IDs                   |
-| HTTP error handling    | Simulate a timeout and verify exception propagation                |
+| Area | Coverage |
+| --- | --- |
+| Posts API | Retrieve individual posts and the posts collection; create, update, patch, and delete posts |
+| Posts collection | Validate HTTP 200, a non-empty JSON list, and every returned post against `POST_SCHEMA` |
+| Negative API scenarios | Non-existing resources and a POST request without a title |
+| Users API | Retrieve individual users and user lists |
+| Data consistency | Compare a user in the list endpoint with the user details endpoint |
+| JSON Schema | Validate post and user response structures |
+| Parameterization | Validate multiple post IDs and expected user IDs |
+| HTTP error handling | Simulate a timeout and verify exception propagation |
 
 The timeout test uses mocking to simulate a `ReadTimeout` without making a real network request.
 
@@ -99,7 +102,7 @@ The timeout test uses mocking to simulate a `ReadTimeout` without making a real 
 
 ### Clone the Repository
 
-```
+```bash
 git clone https://github.com/BenKeidar/python-api-automation.git
 cd python-api-automation
 ```
@@ -108,21 +111,21 @@ cd python-api-automation
 
 **Windows (PowerShell):**
 
-```
+```powershell
 py -3.13 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
 **Linux / macOS:**
 
-```
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
 ### Install Dependencies
 
-```
+```bash
 python -m pip install -r requirements.txt
 ```
 
@@ -130,25 +133,25 @@ python -m pip install -r requirements.txt
 
 Run the complete test suite:
 
-```
+```bash
 python -m pytest tests/ -v
 ```
 
 Run only the Posts API tests:
 
-```
+```bash
 python -m pytest tests/test_posts.py -v
 ```
 
 Run only the Users API tests:
 
-```
+```bash
 python -m pytest tests/test_users.py -v
 ```
 
 Run the BaseClient error-handling test:
 
-```
+```bash
 python -m pytest tests/test_base_client.py -v
 ```
 
@@ -156,13 +159,13 @@ python -m pytest tests/test_base_client.py -v
 
 Generate Allure result files:
 
-```
+```bash
 python -m pytest tests/ -v --alluredir=allure-results --clean-alluredir
 ```
 
 View the report locally with Allure CLI:
 
-```
+```bash
 allure serve allure-results
 ```
 
@@ -198,6 +201,37 @@ The CI pipeline:
 The HTML report is available as a downloadable GitHub Actions artifact; it is not published as a public website.
 
 The workflow also records Allure environment and executor metadata to identify the test environment and GitHub Actions run.
+
+## AI-Assisted Code Review with Qodo
+
+The repository uses **Qodo Code Review**, integrated with GitHub, to provide automated AI-assisted reviews of pull requests.
+
+The development and review workflow is:
+
+1. Create a dedicated feature branch.
+2. Implement changes and run the test suite locally.
+3. Push the branch and open a pull request targeting `main`.
+4. Review GitHub Actions checks and Qodo's feedback.
+5. Address any relevant findings before merging.
+6. Merge the pull request and synchronize the local `main` branch.
+
+### Pull Request #1 — Posts Collection Test
+
+The first reviewed pull request, [**Add posts list API test with JSON Schema validation**](https://github.com/BenKeidar/python-api-automation/pull/1), introduced `PostsClient.get_posts()` and a test validating the `/posts` collection.
+
+Qodo generated a pull request summary, an architecture diagram, and a high-level assessment. Its review reported:
+
+| Review category | Findings |
+| --- | ---: |
+| Bugs | 0 |
+| Rule violations | 0 |
+| Requirement gaps | 0 |
+
+GitHub displayed **2 successful checks** and no merge conflicts. The pull request was successfully merged into `main`.
+
+Qodo's assessment supported reusing the existing client and post schema rather than introducing an additional collection-level abstraction for this test.
+
+**AI review is an additional quality signal, not a guarantee of defect-free code or a substitute for testing and human judgment.**
 
 ## Testing Approach
 
