@@ -21,3 +21,6 @@ class PostsClient(BaseClient):
 
     def delete_post(self, post_id):
         return self.request("DELETE", f"{self.resource}/{post_id}")
+
+    def get_posts(self):
+        return self.request("GET", self.resource)

@@ -157,3 +157,25 @@ def test_create_post_without_title(posts_client):
         assert data["userId"] == payload["userId"]
         assert "id" in data
         assert "title" not in data
+
+
+@allure.title("Get all posts and validate response schema")
+@allure.feature("Posts API")
+@allure.story("Get posts list")
+def test_get_posts_list(posts_client):
+    with allure.step("Send GET request to /posts"):
+        response = posts_client.get_posts()
+        attach_response(response)
+
+    with allure.step("Validate response status"):
+        assert response.status_code == 200
+
+    with allure.step("Validate posts list"):
+        posts = response.json()
+
+        assert isinstance(posts, list)
+        assert len(posts) > 0
+
+    with allure.step("Validate every post against POST_SCHEMA"):
+        for post in posts:
+            validate(instance=post, schema=POST_SCHEMA)
