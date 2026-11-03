@@ -24,6 +24,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run API tests
+        id: api_tests
         run: |
           python -m pytest tests/ -v --alluredir=allure-results
 
@@ -64,4 +65,55 @@ jobs:
         with:
           name: allure-html-report
           path: allure-report/
-          if-no-files-found: warn    
+          if-no-files-found: warn
+
+      - name: Notify n8n about CI result
+        if: ${{ always() && github.event_name != 'pull_request' }}
+        continue-on-error: true
+        env:
+          N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
+          N8N_WEBHOOK_SECRET: ${{ secrets.N8N_WEBHOOK_SECRET }}
+          TEST_OUTCOME: ${{ steps.api_tests.outcome }}
+          PROJECT: ${{ github.event.repository.name }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          webhook_url = os.environ.get("N8N_WEBHOOK_URL")
+          webhook_secret = os.environ.get("N8N_WEBHOOK_SECRET")
+          test_outcome = os.environ.get("TEST_OUTCOME")
+
+          if not webhook_url or not webhook_secret:
+              print("n8n secrets are missing; skipping notification.")
+              raise SystemExit(0)
+
+          if test_outcome not in ("success", "failure"):
+              print(f"Test outcome is {test_outcome!r}; skipping notification.")
+              raise SystemExit(0)
+
+          payload = {
+              "project": os.environ["PROJECT"],
+              "status": test_outcome,
+              "branch": os.environ["BRANCH"],
+              "run_id": int(os.environ["RUN_ID"]),
+              "run_url": os.environ["RUN_URL"],
+          }
+
+          request = urllib.request.Request(
+              webhook_url,
+              data=json.dumps(payload).encode("utf-8"),
+              headers={
+                  "Content-Type": "application/json",
+                  "X-Webhook-Secret": webhook_secret,
+              },
+              method="POST",
+          )
+
+          with urllib.request.urlopen(request, timeout=10) as response:
+              print(f"n8n notification sent. HTTP status: {response.status}")
+          PY
